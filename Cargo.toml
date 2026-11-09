@@ -5,15 +5,17 @@ edition = "2024"
 
 [dependencies]
 curve25519-dalek = { version = "5.0.0", default-features = false, features = ["zeroize"] }
-ed25519-dalek = { version = "3.0.0", default-features = false, features = ["fast", "zeroize"] }
+ed25519-dalek = { version = "3.0.0", default-features = false, features = ["zeroize"] }
 getrandom = { version = "0.4.3", optional = true }
 poly1305 = { version = "0.9.1", default-features = false }
 salsa20 = { version = "0.11.0", default-features = false }
 sha2 = { version = "0.11.1", default-features = false }
 
 [features]
-default = ["std"]
+default = ["std", "fast"]
 std = ["dep:getrandom"]
+# Precomputed tables: faster signing and key generation, at the cost of flash
+fast = ["ed25519-dalek/fast", "curve25519-dalek/precomputed-tables"]
 
 [dev-dependencies]
 hex = "0.4.3"

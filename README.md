@@ -7,7 +7,9 @@ wire-compatible with Ironwood at commit
 test suite checks this against the Go implementation directly.
 
 The protocol core is `no_std` and only needs `alloc`. It builds for bare-metal
-targets such as `thumbv7em-none-eabihf` and `riscv32imc-unknown-none-elf`.
+targets such as `thumbv7em-none-eabihf` and `riscv32imc-unknown-none-elf` with
+`default-features = false`. The `fast` feature (on by default) adds precomputed
+curve tables, which speed up signing but take extra flash.
 
 ## Layout
 
