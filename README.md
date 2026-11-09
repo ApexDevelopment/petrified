@@ -1,37 +1,16 @@
 # Petrified
 
-A Rust port of [Ironwood](https://github.com/Arceliar/ironwood), the routing
-protocol behind [Yggdrasil](https://yggdrasil-network.github.io/). It is
-wire-compatible with Ironwood at commit
-[`0712ecc`](https://github.com/Arceliar/ironwood/commit/0712eccbb962), and the
-test suite checks this against the Go implementation directly.
+A Rust port of [Ironwood](https://github.com/Arceliar/ironwood), the routing protocol that powers [Yggdrasil](https://yggdrasil-network.github.io/). It is compatible with Ironwood at commit [`0712ecc`](https://github.com/Arceliar/ironwood/commit/0712eccbb962).
 
-The protocol core is `no_std` and only needs `alloc`. It builds for bare-metal
-targets such as `thumbv7em-none-eabihf` and `riscv32imc-unknown-none-elf` with
-`default-features = false`. The `fast` feature (on by default) adds precomputed
-curve tables, which speed up signing but take extra flash.
+Petrified was designed with bare-metal targets in mind. The protocol core is `no_std` and only needs `alloc`, and it builds for `thumbv7em-none-eabihf` and `riscv32imc-unknown-none-elf` with `default-features = false`. The `fast` feature (on by default) adds precomputed curve tables, which speed up signing but take extra flash.
 
-## Layout
+The modules mirror Ironwood's packages, aside from `petrified::blocking`.
 
-The modules mirror Ironwood's packages:
-
-| Go                | Rust                  |                                                       |
-| ----------------- | --------------------- | ----------------------------------------------------- |
-| `types`           | `petrified::types`    | Keys, errors, the `PacketConn` trait, `Platform`      |
-| `network`         | `petrified::network`  | Spanning tree, greedy routing, bloom-filter lookups   |
-| `encrypted`       | `petrified::encrypted`| End-to-end encrypted sessions                         |
-| `signed`          | `petrified::signed`   | Signed, unencrypted packets                           |
-| —                 | `petrified::blocking` | Threads and blocking calls, like Go's API (`std` only) |
-
-Within `network`, files match their Go counterparts (`router.rs`,
-`pathfinder.rs`, `bloomfilter.rs`, `peers.rs`, `packetqueue.rs`, ...).
-
-## Using it
+## Usage
 
 ### With `std`
 
-`blocking::PacketConn` wraps any layer and behaves like Go's `net.PacketConn`
-plus `HandleConn`:
+`blocking::PacketConn` wraps any layer and behaves like Go's `net.PacketConn` plus `HandleConn`:
 
 ```rust
 use petrified::{blocking, encrypted, network::Config, types::{PrivateKey, StdPlatform}};
@@ -54,8 +33,7 @@ See `examples/node.rs` for a complete program.
 
 ### Without `std`
 
-Each layer is a sans-IO state machine implementing `types::PacketConn`. Implement
-`types::Platform` for your device:
+Each layer is a sans-IO state machine implementing `types::PacketConn`. Implement `types::Platform` for your device:
 
 ```rust
 impl Platform for MyBoard {
@@ -74,10 +52,7 @@ Then drive the node from your event loop:
 - `poll_event()` for peers the protocol dropped, whose streams you should close.
 - `write_to(data, dest)` and `recv()` for application packets.
 
-Ironwood uses Unix time as a sequence number for session handshakes and path
-notifications. On a device without a real-time clock, `unix_time` must still
-never go backwards, including across reboots. Otherwise peers ignore the
-device's handshakes until their old state times out (about a minute).
+Ironwood uses Unix time as a sequence number for session handshakes and path notifications. On a device without a real-time clock, `unix_time` must still never go backwards, including across reboots. Otherwise peers ignore the device's handshakes until their old state times out (about a minute).
 
 ## Differences from Go
 
@@ -93,17 +68,9 @@ cargo test --lib --test sim    # Rust only
 cargo test                     # also runs the Go interop tests
 ```
 
-The interop tests need Go 1.26 or newer (set `GO=/path/to/go` if it is not on
-`PATH`) and network access to download Ironwood. `interop/build.sh` builds a
-harness from an unmodified copy of upstream Ironwood, adding only files that
-export internals. The tests then:
+The interop tests need Go 1.26 or newer and will download Ironwood. `interop/build.sh` builds a harness from an unmodified copy of upstream Ironwood, adding files to export internals, then:
 
-- send the same inputs through both implementations and compare the results: wire
-  encodings (including malformed and mutated messages), signatures, key validation,
-  bloom filter hashing, key conversion, NaCl boxes, session handshakes, and the
-  tree and next-hop logic;
-- run mixed networks of Go and Rust nodes over TCP on every layer, and check that
-  they agree on the tree and deliver traffic between every pair of nodes, including
-  after nodes leave.
+- Sends the same inputs through both implementations and compares the results.
+- Runs mixed networks of Go and Rust nodes over TCP on every layer, checking that they agree on the tree and deliver traffic between every pair of nodes.
 
 `tests/sim.rs` runs larger networks deterministically on a virtual clock.
