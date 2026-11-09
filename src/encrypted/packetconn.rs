@@ -75,6 +75,11 @@ impl PacketConn {
 		&self.net
 	}
 
+	/// Mutable access to the routing layer, e.g. to set its debug lookup logger.
+	pub fn network_mut(&mut self) -> &mut network::PacketConn {
+		&mut self.net
+	}
+
 	pub fn get_sessions(&self) -> Vec<DebugSessionInfo> {
 		let now = self.net.now();
 		self.sessions
