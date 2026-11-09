@@ -2,6 +2,7 @@ use alloc::boxed::Box;
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 
+use super::config::PathNotifier;
 use super::debug::DebugLookupInfo;
 use super::packetconn::Core;
 use super::packetqueue::PqPacket;
@@ -161,7 +162,14 @@ impl Core {
 		info.broken = false;
 		let pending = info.traffic.take();
 		self.router.pathfinder.paths.insert(notify.source, info);
-		(self.config.path_notify)(&notify.source);
+		match &mut self.config.path_notify {
+			PathNotifier::Callback(notify_path) => notify_path(&notify.source),
+			PathNotifier::Queue => {
+				if !self.path_notifications.contains(&notify.source) {
+					self.path_notifications.push_back(notify.source);
+				}
+			}
+		}
 		if let Some(tr) = pending {
 			self.pathfinder_handle_traffic(tr);
 		}

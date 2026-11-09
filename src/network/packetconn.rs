@@ -33,6 +33,7 @@ pub(crate) struct Core {
 	pub pconn: PConnState,
 	pub platform: Box<dyn Platform + Send>,
 	pub events: VecDeque<Event>,
+	pub path_notifications: VecDeque<PublicKey>,
 }
 
 impl Core {
@@ -80,6 +81,7 @@ impl PacketConn {
 			pconn: PConnState::default(),
 			platform: Box::new(platform),
 			events: VecDeque::new(),
+			path_notifications: VecDeque::new(),
 		};
 		core.router_init();
 		Ok(PacketConn { core })
@@ -87,6 +89,12 @@ impl PacketConn {
 
 	pub fn debug(&self) -> Debug<'_> {
 		Debug { core: &self.core }
+	}
+
+	/// Takes the next node a path was found or updated to, if the config
+	/// asked for queued path notifications.
+	pub fn poll_path_notify(&mut self) -> Option<PublicKey> {
+		self.core.path_notifications.pop_front()
 	}
 
 	/// Calls `logger` for every lookup this node handles.

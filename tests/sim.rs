@@ -127,6 +127,15 @@ impl Sim {
 		self.nodes.len() - 1
 	}
 
+	fn add_node_with_queued_paths(&mut self) -> usize {
+		let key = self.rng.private_key();
+		let platform = self.platform();
+		let config = Config::default().with_path_notify_queue();
+		let conn = network::PacketConn::new(&key, platform, config).unwrap();
+		self.nodes.push(Node::Network(conn));
+		self.nodes.len() - 1
+	}
+
 	fn key(&self, node: usize) -> PublicKey {
 		self.nodes[node].network().debug().get_self().key
 	}
@@ -549,4 +558,29 @@ fn writes_respect_the_mtu_and_close() {
 		assert_eq!(conn.write_to(b"x", &dest), Err(Error::Closed));
 		assert_eq!(conn.handle_conn(&dest, 0), Err(Error::Closed));
 	}
+}
+
+#[test]
+fn queued_path_notifications() {
+	let mut sim = Sim::new(9);
+	let source = sim.add_node_with_queued_paths();
+	let middle = sim.add_node(Layer::Network);
+	let target = sim.add_node(Layer::Network);
+	sim.connect(source, middle);
+	sim.connect(middle, target);
+	sim.wait_for_root(Duration::from_secs(30));
+	let Node::Network(conn) = &mut sim.nodes[source] else {
+		unreachable!()
+	};
+	assert_eq!(conn.poll_path_notify(), None);
+	let target_key = sim.key(target);
+	assert!(
+		sim.deliver(source, target, b"hello", Duration::from_secs(20))
+			.is_some()
+	);
+	let Node::Network(conn) = &mut sim.nodes[source] else {
+		unreachable!()
+	};
+	assert_eq!(conn.poll_path_notify(), Some(target_key));
+	assert_eq!(conn.poll_path_notify(), None);
 }
