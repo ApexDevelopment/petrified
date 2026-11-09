@@ -2,6 +2,11 @@
 name = "petrified"
 version = "0.1.0"
 edition = "2024"
+description = "A Rust port of Ironwood, the routing protocol behind Yggdrasil"
+license = "MPL-2.0"
+readme = "README.md"
+keywords = ["ironwood", "yggdrasil", "mesh", "routing", "no-std"]
+categories = ["network-programming", "no-std"]
 
 [dependencies]
 curve25519-dalek = { version = "5.0.0", default-features = false, features = ["zeroize"] }
